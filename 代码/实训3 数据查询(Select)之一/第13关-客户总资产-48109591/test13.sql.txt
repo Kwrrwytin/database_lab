@@ -1,0 +1,22 @@
+-- 13) 综合客户表(client)、资产表(property)、理财产品表(finances_product)、
+--     保险表(insurance)、基金表(fund)和投资资产表(property)，
+--     列出所有客户的编号、名称和总资产，总资产命名为total_property。
+--     总资产为储蓄卡余额，投资总额，投资总收益的和，再扣除信用卡透支的金额
+--     (信用卡余额即为透支金额)。客户总资产包括被冻结的资产。
+--    请用一条SQL语句实现该查询：
+
+
+select c.c_id, c.c_name, ifnull(sum(ps.pro_quantity*ps.amount) + sum(ps.pro_income) + cb.tt,0) as total_property
+from(
+(select p.pro_c_id, p.pro_quantity, p.pro_income, amount from property p inner join (select f_id, f_amount from fund) as f(id,amount) on (p.pro_pif_id=f.id) where p.pro_type=3) union all
+(select p.pro_c_id, p.pro_quantity, p.pro_income, amount from property p inner join (select p_id, p_amount from finances_product) as fp(id,amount) on (p.pro_pif_id=fp.id) where p.pro_type=1) union all
+(select p.pro_c_id, p.pro_quantity, p.pro_income, amount from property p inner join (select i_id, i_amount from insurance) as i(id,amount) on (p.pro_pif_id=i.id) where p.pro_type=2)
+) as ps right outer join (
+client c left outer join (
+select b_c_id, sum(case b_type when '储蓄卡' then b_balance else -1*b_balance end) as card_tt
+from bank_card
+group by b_c_id) as cb(id,tt) on (c.c_id=cb.id)
+) on (ps.pro_c_id=c.c_id)
+group by c.c_id
+order by c.c_id;
+/*  end  of  your code  */ 
